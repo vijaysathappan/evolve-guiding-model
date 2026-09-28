@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "start": "node server/server.js",
-    "dev": "concurrently \"vite\" \"node server/server.js\"",
+    "dev": "concurrently -n vite,node,analytics -c blue,green,magenta \"vite\" \"node server/server.js\" \"python3 backend/analytics/main.py\"",
+    "dev:analytics": "python3 backend/analytics/main.py",
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --test \"server/**/*.test.js\"",
+    "test:analytics": "pytest backend/analytics -v",
     "preview": "vite preview"
   },
   "dependencies": {

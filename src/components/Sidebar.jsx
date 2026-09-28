@@ -8,7 +8,8 @@ import {
   Folder, FolderOpen, PlayCircle, X, Brain, Target, Maximize2, Search
 } from 'lucide-react';
 import './Sidebar.css';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, ANALYTICS_API_URL } from '../config/api';
+import UsageAnalyticsPane from './UsageAnalyticsPane';
 
 export default function Sidebar({ user, selectedSessionId, onSelectChat, onLogout, userTrack, setUserTrack, activeView, setActiveView, activeLearnChapter, setActiveLearnChapter }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -78,13 +79,27 @@ export default function Sidebar({ user, selectedSessionId, onSelectChat, onLogou
 
   const fetchTokenUsage = React.useCallback(async () => {
     if (!user?.id) return;
+    // Authoritative source: the Python analytics service sums every row in
+    // the llm_log ledger (chat + learn + quiz/exam + news agent), unlike the
+    // old Node /api/user/usage which only totals chat session tokens.
+    try {
+      const resp = await fetch(`${ANALYTICS_API_URL}/api/analytics/summary?user_id=${user.id}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.total_tokens !== undefined) {
+          setTotalTokens(data.total_tokens);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Analytics service unreachable, falling back to session-token count:', err.message);
+    }
+    // Fallback so the badge still shows something if the analytics service isn't running.
     try {
       const resp = await fetch(`${API_BASE_URL}/api/user/usage/${user.id}`);
       if (resp.ok) {
         const data = await resp.json();
-        if (data.total_token !== undefined) {
-          setTotalTokens(data.total_token);
-        }
+        if (data.total_token !== undefined) setTotalTokens(data.total_token);
       }
     } catch (err) {
       console.error('Failed to fetch token usage in sidebar:', err);
@@ -415,6 +430,7 @@ export default function Sidebar({ user, selectedSessionId, onSelectChat, onLogou
 
   const categories = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutGrid size={18} /> },
+    { id: 'usage', label: 'Usage Analytics', icon: <BarChart3 size={18} /> },
     { id: 'general', label: 'General', icon: <Settings size={18} /> },
     { id: 'account', label: 'Account', icon: <HelpCircle size={18} /> },
     { id: 'subscription', label: 'Subscription', icon: <CreditCard size={18} /> }
@@ -422,55 +438,51 @@ export default function Sidebar({ user, selectedSessionId, onSelectChat, onLogou
 
   const renderCategoryContent = () => {
     switch (activeCategory) {
-      case 'dashboard':
+      case 'dashboard': {
+        const usedPct = Math.min(100, Math.round((totalTokens / 200000) * 100));
+        const usedColor = usedPct <= 50 ? '#10b981' : usedPct <= 80 ? '#f59e0b' : '#ef4444';
+        const masteryPct = (() => {
+          const tracked = planTasks.filter(t => t.mastery !== null);
+          if (!tracked.length) return null;
+          return Math.round(tracked.reduce((a, t) => a + t.mastery, 0) / tracked.length * 100);
+        })();
         return (
           <div className="settings-pane animate-fadeIn">
             <h3 className="pane-title">Dashboard & Usage</h3>
-            <div className="pane-section">
-              <div className="settings-form-row">
-                 <div className="flex-col">
-                   <div className="settings-form-label">Token Capacity</div>
-                   <div className="settings-form-label-desc">{totalTokens.toLocaleString()} of 200,000 Limit</div>
-                 </div>
-                 <div className="settings-avatar" style={{ background: 'transparent', width: 'auto', color: 'var(--accent-brand)' }}>
-                   {Math.round((totalTokens / 200000) * 100)}% Used
-                 </div>
+            <div className="dash-stat-grid">
+              <div className="dash-stat-card">
+                <div className="dash-stat-top">
+                  <span className="dash-stat-label">Token Capacity</span>
+                  <span className="dash-stat-badge" style={{ color: usedColor, background: `${usedColor}1a` }}>{usedPct}% Used</span>
+                </div>
+                <div className="dash-stat-value">{totalTokens.toLocaleString()}<span className="dash-stat-unit"> / 200,000</span></div>
+                <div className="dash-stat-bar-track"><div className="dash-stat-bar-fill" style={{ width: `${usedPct}%`, background: usedColor }} /></div>
               </div>
-              <div className="settings-form-row">
-                 <div className="flex-col">
-                   <div className="settings-form-label">Concept Mastery</div>
-                   <div className="settings-form-label-desc">Average across tracked chapters</div>
-                 </div>
-                 <div className="settings-avatar" style={{ background: 'transparent', width: 'auto', color: '#10b981' }}>
-                   {(() => {
-                     const tracked = planTasks.filter(t => t.mastery !== null);
-                     if (!tracked.length) return '—';
-                     return Math.round(tracked.reduce((a, t) => a + t.mastery, 0) / tracked.length * 100) + '%';
-                   })()}
-                 </div>
+              <div className="dash-stat-card">
+                <div className="dash-stat-top"><span className="dash-stat-label">Concept Mastery</span></div>
+                <div className="dash-stat-value" style={{ color: '#10b981' }}>{masteryPct === null ? '—' : `${masteryPct}%`}</div>
+                <div className="dash-stat-desc">Average across tracked chapters</div>
               </div>
-              <div className="settings-form-row">
-                 <div className="flex-col">
-                   <div className="settings-form-label">Active Days</div>
-                   <div className="settings-form-label-desc">Consistent study schedule</div>
-                 </div>
-                 <div className="settings-avatar" style={{ background: 'transparent', width: 'auto', color: '#34d399' }}>
-                   {dashboardStats.activeDays} days
-                 </div>
+              <div className="dash-stat-card">
+                <div className="dash-stat-top"><span className="dash-stat-label">Active Days</span></div>
+                <div className="dash-stat-value" style={{ color: '#34d399' }}>{dashboardStats.activeDays}</div>
+                <div className="dash-stat-desc">Consistent study schedule</div>
               </div>
-              <div className="settings-form-row">
-                 <div className="flex-col">
-                   <div className="settings-form-label">Max Streak</div>
-                   <div className="settings-form-label-desc">Longest learning streak</div>
-                 </div>
-                 <div className="settings-avatar" style={{ background: 'transparent', width: 'auto', color: '#f87171' }}>
-                   {dashboardStats.maxStreak} days
-                 </div>
+              <div className="dash-stat-card">
+                <div className="dash-stat-top"><span className="dash-stat-label">Max Streak</span></div>
+                <div className="dash-stat-value" style={{ color: '#f87171' }}>{dashboardStats.maxStreak}<span className="dash-stat-unit"> days</span></div>
+                <div className="dash-stat-desc">Longest learning streak</div>
               </div>
             </div>
-
+            <button className="dash-usage-link" onClick={() => setActiveCategory('usage')}>
+              <BarChart3 size={15} /> View full usage analytics
+            </button>
           </div>
         );
+      }
+
+      case 'usage':
+        return <UsageAnalyticsPane user={user} />;
 
       case 'general':
         return (

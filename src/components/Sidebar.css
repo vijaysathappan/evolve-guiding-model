@@ -1092,14 +1092,14 @@
 }
 
 .settings-modal {
-  background-color: #2b2a2a;
-  width: 900px;
+  background-color: #262626;
+  width: 980px;
   max-width: 95vw;
-  height: 650px;
-  max-height: 85vh;
-  border-radius: 12px;
+  height: 700px;
+  max-height: 88vh;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5);
   display: flex;
   overflow: hidden;
   animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1130,7 +1130,7 @@
 
 .settings-sidebar {
   width: 250px;
-  background: #2b2a2a;
+  background: #232323;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   padding: 24px 16px;
   display: flex;
@@ -1182,14 +1182,15 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 9px 12px;
+  border-radius: 8px;
   color: #a3a3a3;
   font-size: 0.9rem;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   width: 100%;
   text-align: left;
   border: none;
+  border-left: 2px solid transparent;
   background: transparent;
   cursor: pointer;
 }
@@ -1200,16 +1201,18 @@
 }
 
 .settings-nav-item.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--accent-brand) 14%, transparent);
   color: #fff;
-  font-weight: 500;
+  font-weight: 600;
+  border-left-color: var(--accent-brand);
 }
+.settings-nav-item.active svg { color: var(--accent-brand); }
 
 .settings-main-content {
   flex: 1;
-  padding: 40px 48px;
+  padding: 36px 44px;
   overflow-y: auto;
-  background: #2b2a2a;
+  background: #262626;
 }
 
 .settings-pane {
@@ -1237,7 +1240,6 @@
   justify-content: space-between;
   padding: 16px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
 }
 
 
@@ -2118,26 +2120,29 @@
 }
 
 .settings-form-input {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 6px 8px;
-  border-radius: 4px;
-  color: #000;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #fff;
   font-size: 0.9rem;
   outline: none;
   width: 280px;
   text-align: left;
+  transition: border-color 0.15s;
 }
+.settings-form-input::placeholder { color: #6b6b6b; }
 .settings-form-input:focus {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: var(--accent-brand);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .settings-form-select {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 6px 8px;
-  border-radius: 4px;
-  color: #000;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #fff;
   font-size: 0.9rem;
   outline: none;
   cursor: pointer;
@@ -2146,9 +2151,72 @@
   justify-content: space-between;
   width: auto;
   min-width: 140px;
+  transition: all 0.15s;
+  color-scheme: dark;
 }
 .settings-form-select:hover {
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Dashboard stat cards */
+.dash-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.dash-stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 18px 20px;
+  transition: border-color 0.15s;
+}
+.dash-stat-card:hover { border-color: rgba(255, 255, 255, 0.14); }
+.dash-stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.dash-stat-label { font-size: 0.82rem; color: #a3a3a3; font-weight: 500; }
+.dash-stat-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+.dash-stat-value { font-size: 1.7rem; font-weight: 700; color: #fff; line-height: 1.1; }
+.dash-stat-unit { font-size: 0.9rem; font-weight: 500; color: #7a7a7a; }
+.dash-stat-desc { font-size: 0.78rem; color: #7a7a7a; margin-top: 6px; }
+.dash-stat-bar-track {
+  margin-top: 12px;
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.dash-stat-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+
+.dash-usage-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--accent-brand);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dash-usage-link:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); }
+
+@media (max-width: 640px) {
+  .dash-stat-grid { grid-template-columns: 1fr; }
 }
 
 /* Avatar Circle */

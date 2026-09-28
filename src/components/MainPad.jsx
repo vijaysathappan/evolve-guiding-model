@@ -9,7 +9,7 @@ import QuizMode   from './modes/QuizMode';
 import ExamMode   from './modes/ExamMode';
 import TopicsMode from './modes/TopicsMode';
 import SolveMode  from './modes/SolveMode';
-import { NODE_API_URL, LLM_API_URL, API_BASE_URL } from '../config/api';
+import { NODE_API_URL, LLM_API_URL, API_BASE_URL, ANALYTICS_API_URL } from '../config/api';
 import './modes/Modes.css';
 
 const Typewriter = ({ text, speed = 8, onComplete }) => {
@@ -274,6 +274,24 @@ export default function MainPad({ user, selectedSessionId, onSelectChat, onLogou
 
   const fetchTokenUsage = React.useCallback(async () => {
     if (!user?.id) return;
+    // Authoritative source: the Python analytics service sums the full
+    // llm_log ledger (every AI call — chat, learn, quiz/exam, news agent),
+    // not just chat-session tokens, so this starts at 0 for a fresh user
+    // and climbs accurately with ANY feature that calls the LLM.
+    try {
+      const resp = await fetch(`${ANALYTICS_API_URL}/api/analytics/summary?user_id=${user.id}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.total_tokens !== undefined) {
+          setTokenCount(data.total_tokens);
+          setTokenLimit(data.limit || 200000);
+          setUsage(data.used_pct ?? Math.min(100, Math.round((data.total_tokens / (data.limit || 200000)) * 100)));
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Analytics service unreachable, falling back to session-token count:', err.message);
+    }
     try {
       const resp = await fetch(`${API_BASE_URL}/api/user/usage/${user.id}`);
       if (resp.ok) {
@@ -282,8 +300,7 @@ export default function MainPad({ user, selectedSessionId, onSelectChat, onLogou
         const limit = data.limit || 200000;
         setTokenCount(total);
         setTokenLimit(limit);
-        const pct = Math.min(100, Math.round((total / limit) * 100));
-        setUsage(pct);
+        setUsage(Math.min(100, Math.round((total / limit) * 100)));
       }
     } catch (err) {
       console.error('Failed to fetch token usage:', err);
