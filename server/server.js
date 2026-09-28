@@ -17,6 +17,7 @@ import { table, uuid } from './db.js';
 import { seed } from './seed.js';
 import { chat as llmChat, extractJson } from './services/llm.js';
 import { buildIndex, retrieve, groundedAnswer } from './services/rag.js';
+import { getLiveNews, startNewsScheduler } from './services/newsAgent.js';
 
 const app = express();
 app.use(cors());
@@ -33,6 +34,7 @@ const PORT = process.env.SERVER_PORT || 5000;
 
 seed();
 buildIndex();
+startNewsScheduler(); // proactively refreshes the Live News agent feed every 6h
 
 const publicUser = (u) => ({
   id: u.id,
@@ -339,6 +341,29 @@ app.get('/api/news', (req, res) => {
     .slice()
     .sort((a, b) => new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at));
   res.json({ news: items });
+});
+
+// Agent-curated live feed (see server/services/newsAgent.js). Not DB-backed —
+// in-memory, 6h TTL, scraped fresh from DuckDuckGo and ranked/summarized by
+// an OpenRouter/NVIDIA-free model. `track` is JEE or NEET.
+app.get('/api/news/live', async (req, res) => {
+  try {
+    const result = await getLiveNews(req.query.track || 'JEE');
+    res.json(result);
+  } catch (err) {
+    console.error('News live error:', err);
+    res.status(502).json({ error: 'Failed to fetch live news', detail: err.message });
+  }
+});
+
+app.post('/api/news/refresh', async (req, res) => {
+  try {
+    const result = await getLiveNews(req.body?.track || 'JEE', { force: true });
+    res.json(result);
+  } catch (err) {
+    console.error('News refresh error:', err);
+    res.status(502).json({ error: 'Failed to refresh live news', detail: err.message });
+  }
 });
 
 /* ══════════════════════ LEARN MODE ══════════════════════ */

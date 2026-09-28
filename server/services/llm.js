@@ -8,7 +8,9 @@
 import { table } from '../db.js';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free';
+// Exported so other agents (e.g. the News agent pipeline) can report which
+// model actually powered them, and so a single env var controls all of them.
+export const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free';
 
 function stripReasoning(text) {
   if (!text) return '';

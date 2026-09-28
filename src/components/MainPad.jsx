@@ -83,15 +83,38 @@ export default function MainPad({ user, selectedSessionId, onSelectChat, onLogou
   const [selectedNews, setSelectedNews] = useState(null); // For Expanded View
   const [showAllNews, setShowAllNews] = useState(false); // For All News Modal
   const [newsFilter, setNewsFilter] = useState('All'); // 'All' | 'JEE' | 'NEET' | 'CBSE'
+  const [isNewsRefreshing, setIsNewsRefreshing] = useState(false);
+  const [newsGeneratedAt, setNewsGeneratedAt] = useState(null);
   const recognitionRef = useRef(null);
 
-  useEffect(() => {
-    // News now comes from the local API (the old Supabase project is gone)
-    fetch(`${NODE_API_URL}/api/news`)
+  // Live News agent feed: DuckDuckGo-scraped + OpenRouter/NVIDIA-model-curated,
+  // scoped to the student's track (JEE/NEET). Server caches it for 6h.
+  const fetchLiveNews = React.useCallback((force = false) => {
+    if (force) setIsNewsRefreshing(true);
+    const req = force
+      ? fetch(`${NODE_API_URL}/api/news/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ track: userTrack }),
+        })
+      : fetch(`${NODE_API_URL}/api/news/live?track=${encodeURIComponent(userTrack)}`);
+
+    req
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data.news)) setLiveNews(data.news); })
-      .catch(err => console.error('Failed to fetch news:', err));
-  }, []);
+      .then(data => {
+        if (Array.isArray(data.items)) {
+          setLiveNews(data.items);
+          setNewsBatchIndex(0);
+        }
+        if (data.generated_at) setNewsGeneratedAt(data.generated_at);
+      })
+      .catch(err => console.error('Failed to fetch live news:', err))
+      .finally(() => { if (force) setIsNewsRefreshing(false); });
+  }, [userTrack]);
+
+  useEffect(() => {
+    fetchLiveNews(false);
+  }, [fetchLiveNews]);
 
   useEffect(() => {
     const totalBatches = Math.ceil(liveNews.length / 5);
@@ -533,7 +556,17 @@ export default function MainPad({ user, selectedSessionId, onSelectChat, onLogou
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', padding: '0 8px' }}>
                   <span style={{ fontSize: '0.85rem', color: '#a3a3a3', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Live News Updates</span>
-                  <button onClick={() => setShowAllNews(true)} style={{ background: 'none', border: 'none', color: '#818cf8', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>View All News</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <button
+                      onClick={() => fetchLiveNews(true)}
+                      disabled={isNewsRefreshing}
+                      title={newsGeneratedAt ? `Last updated ${new Date(newsGeneratedAt).toLocaleTimeString()}` : 'Refresh'}
+                      style={{ background: 'none', border: 'none', color: '#818cf8', cursor: isNewsRefreshing ? 'default' : 'pointer', display: 'flex', alignItems: 'center', padding: 0, opacity: isNewsRefreshing ? 0.6 : 1 }}
+                    >
+                      <RotateCw size={15} className={isNewsRefreshing ? 'spin-icon' : ''} />
+                    </button>
+                    <button onClick={() => setShowAllNews(true)} style={{ background: 'none', border: 'none', color: '#818cf8', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>View All News</button>
+                  </div>
                 </div>
                 {liveNews.length === 0 && (
                   <div style={{ textAlign: 'center', padding: '24px', color: '#a3a3a3', fontSize: '0.9rem' }}>Fetching latest news...</div>
