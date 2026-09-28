@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/query",
+      "destination": "/api/query.py"
+    },
+    {
+      "source": "/api/learn/(.*)",
+      "destination": "/api/query.py"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/auth.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
